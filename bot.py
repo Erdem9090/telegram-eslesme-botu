@@ -1,6 +1,10 @@
-﻿import os
+import os
+import logging
 from telegram import Update
 from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, ContextTypes, filters
+from telegram.request import HTTPXRequest
+
+logging.basicConfig(level=logging.INFO)
 
 waiting_user: int | None = None
 active_pairs: dict[int, int] = {}
@@ -50,12 +54,25 @@ async def mesaj_ilet(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 def main():
     token = os.environ["BOT_TOKEN"]
-    app = ApplicationBuilder().token(token).connect_timeout(30.0).read_timeout(30.0).build()
+    request = HTTPXRequest(
+        connection_pool_size=20,
+        connect_timeout=60.0,
+        read_timeout=60.0,
+        write_timeout=60.0,
+        pool_timeout=60.0,
+    )
+    app = (
+        ApplicationBuilder()
+        .token(token)
+        .request(request)
+        .get_updates_request(request)
+        .build()
+    )
     app.add_handler(CommandHandler("baglan", baglan))
     app.add_handler(CommandHandler("ayril", ayril))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, mesaj_ilet))
     print("Bot baslatildi!")
-    app.run_polling()
+    app.run_polling(poll_interval=2.0, timeout=30)
 
 if __name__ == "__main__":
     main()
